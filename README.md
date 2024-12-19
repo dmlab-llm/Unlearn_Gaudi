@@ -1,62 +1,64 @@
-# MOUCHI: Mitigating Over-forgetting in Unlearning Copyrighted Information
+# Mitigating Over-forgetting in Unlearning Copyrighted Information (MOUCHI) in Gaudi
 
-This code is part of our paper and is built upon the original code provided by the TOFU dataset used in our experiments [[1]](#1). For additional details, we encourage you to explore their repository as well
+## Introduction
 
-## Installation
+In this repository, we implement the MOUCHI framework in Gaudi. The framework consists of two main submodules:
 
-```
-conda create -n tofu python=3.10
-conda activate tofu
-conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia
-conda install -c "nvidia/label/cuda-11.8.0" cuda-toolkit
+1. **Derivative Knowledge Generation**
+2. **Derivative Knowledge Incorporation During the Unlearning Process**
+
+This code is part of our research paper and is built upon the original code provided by the TOFU dataset used in our experiments [[1]](https://github.com/dmlab-llm/Unlearn_Gaudi/tree/main#1). For additional details, we encourage you to explore their repository.
+
+## Getting Started
+
+Inside the Gaudi docker environment, install the necessary dependencies by running:
+
+```bash
 pip install -r requirements.txt
-pip install flash-attn --no-build-isolation
 ```
 
-## Finetune your models
+## Fine-tuning
 
-This script is used to fine-tune the model in preparation for the unlearning process. for fine-tuning using lora, use ./config/finetune-lora.yaml
+To fine-tune the model on the dataset, run the following command:
 
-```
-master_port=18765
-lr=1e-4
-CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node=2 --master_port=$master_port finetune.py --config-name=finetune.yaml  batch_size=4 gradient_accumulation_steps=4 model_family=llama2-7b lr=${lr}
+```bash
+PT_HPU_LAZY_MODE=0 python finetune.py --config-name=finetune_lora.yaml
 ```
 
-## Forget models
+**Explanation:**
+- `PT_HPU_LAZY_MODE=0`: Enables eager mode as lazy mode is currently not supported on Gaudi.
+- `--config-name`: Specifies the configuration file. Detailed configurations can be found in `config/finetune_lora.yaml`.
 
-This script is for forgetting the finetuned mode:
+For fine-tuning using LoRA, use the configuration file located at `./config/finetune_lora.yaml`.
 
+## Forgetting Models
+
+To perform the unlearning process on the fine-tuned model, use the following script:
+
+```bash
+PT_HPU_LAZY_MODE=0 python forget_drv.py --config-name=forget.yaml
 ```
-CUDA_VISIBLE_DEVICES=0,1 torchrun --nproc_per_node=2 --master_port=$master_port forget.py --config-name=forget.yaml split=${split} batch_size=4 gradient_accumulation_steps=4 model_family=llama2-7b lr=${lr}
+
+The parameters, including the unlearning hyperparameters and loss functions, can be configured in `config/forget.yaml`.
+
+## Derivative Generation and KL Divergence
+
+To generate derivative knowledge, run the following script:
+
+```bash
+PT_HPU_LAZY_MODE=0 python generate_drv.py --args
 ```
 
-## Generation and KL
-all the generation code using llama and gpt with its prompt are available in the generation folder. Furthermore, the KL.py is utilized for calculating the KL values throughout the experiment
+**Arguments:**
+- `--ft_path`: Path to the fine-tuned model (default: `./path/to/finetuned/model`)
+- `--input_csv`: Path to the input CSV file containing the data (default: `./path/to/input/csv`)
+- `--output_csv`: Path to save the output CSV file (default: `./path/to/output/csv`)
+- `--delta_min`: Minimum delta value for derivative generation (default: `0.1`)
+- `--delta_max`: Maximum delta value for derivative generation (default: `0.5`)
+- `--shard_size`: Number of samples per shard (default: `20`)
 
-## Evaluate models
-all the code used for evaluation is available in the eval folder. Example for the evaluate_util script
-```
-CUDA_VISIBLE_DEVICES=0 torchrun --nproc_per_node=1 --master_port=$port evaluate_util.py\
- model_family=llama2-7bsplit=$split\
- model_path=$model_path
-```
-You can modify the configuration in config/eval_everything.yaml
-
-The evaluation result will by default be dumped to `${model_path}/eval_results/ds_size${ds_size}`, you can also modify the `save_dir` field in `config/eval_everything.yaml`
-
-The evaluation results on three datasets (forget, retain, normal) will be aggregated into one json file named `eval_log_aggregated.json`
-
-
-## Datasets
-
-all datasets that we use throughout experiment are available in the data folder
-
-
+Additionally, the `KL.py` script is used to calculate KL divergence values throughout the experiment.
 
 ## Reference
 
-<a id="1">[1]</a> 
-Pratyush Maini, Zhili Feng, Avi Schwarzschild, Zachary C. Lipton, and J. Zico Kolter.
-TOFU: A task of fictitious unlearning for LLMs.
-In Proceedings of the Conference on Language Modeling (COLM), 2024.
+[1] Pratyush Maini, Zhili Feng, Avi Schwarzschild, Zachary C. Lipton, and J. Zico Kolter. TOFU: A task of fictitious unlearning for LLMs. In Proceedings of the Conference on Language Modeling (COLM), 2024.
