@@ -1,0 +1,17 @@
+model_id: NousResearch/Llama-2-7b-chat-hf
+model_family: llama2-7b
+
+LoRA:
+  r: 8
+  alpha: 32
+  dropout: 0.05
+
+data_path: ../DrvKnowledge/MUSE_data/MUSE-News_knowmem_all.csv
+split: full
+batch_size: 4
+gradient_accumulation_steps: 1
+num_epochs: 10
+save_dir: /data/irfan/finetune/MUSE-News_knowmem_all
+lr: 1e-4
+weight_decay: 0
+seed: 42

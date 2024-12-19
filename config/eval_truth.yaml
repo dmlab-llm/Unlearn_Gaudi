@@ -1,0 +1,39 @@
+model_family: llama2-7b
+
+# model_path: "/data/irfan/unlearn_drv/GA_DRV_0.0001_forget25_4"
+model_path: /data/irfan/finetune/ft_epoch20_lr0.0001_llama2-7b_wd0_retain75
+
+# save_dir: ./eval_results/llama2-7b
+save_dir: ./eval_results/retain_baseline
+
+#dataset path for each of the 4 datasets to be evaluated
+data_path: ["/home/irfan/machine unlearning/DrvKnowledge/a_new_data/retain75_perturbed.csv"]
+split: forget25
+split_list:
+  - retain_perturbed
+
+
+question_key: [question]
+answer_key: [answer]
+
+base_answer_key: [paraphrased_answer]
+perturbed_answer_key: [perturbed_answer]
+
+eval_task: [forget_truth_log]
+
+generation:
+  max_length: 200
+  max_new_tokens: null
+
+save_generated_text: true
+
+ds_size: 1000
+
+overwrite: true
+use_pretrained: false
+
+batch_size: 32
+reinitialize_weights: false
+
+retain_result: null
+
