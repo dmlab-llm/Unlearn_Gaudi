@@ -59,6 +59,95 @@ PT_HPU_LAZY_MODE=0 python generate_drv.py --args
 
 Additionally, the `KL.py` script is used to calculate KL divergence values throughout the experiment.
 
+## Detailed Explanation
+
+### forget.py
+
+The main code for forgetting. However, the content is similar to a custom fine-tuning process. The only difference is the usage of the `CustomTrainerForgetting` class from `dataloader.py`:
+
+```python
+trainer = CustomTrainerForgetting(
+    model=model,
+    tokenizer=tokenizer,
+    train_dataset=train_dataset,
+    eval_dataset=train_dataset,
+    args=training_args,
+    data_collator=data_collator,
+    oracle_model=oracle_model,
+    forget_loss=cfg.forget_loss,
+    retain_loss=cfg.retain_loss,
+    derivative_loss=cfg.derivative_loss,
+    use_drv=cfg.use_drv,
+    use_rt=cfg.use_rt,
+    eval_cfg=cfg.eval,
+)
+```
+
+### dataloader.py
+
+**`class CustomTrainer(GaudiTrainer)`**
+
+The custom trainer used for fine-tuning the model with the dataset throughout the experiment.
+
+**`class CustomTrainerForgetting(GaudiTrainer)`**
+
+Consists of several functions:
+
+- `__init__(self, *args, **kwargs)`: Parameters passed from the `GaudiTrainingArgs`.
+- `e_prepare_deepspeed(self, model)`: Modified code from the original transformer’s DeepSpeed code to prepare DeepSpeed.
+- `log_and_print_losses(self, forget_loss, derivative_loss, retain_loss, total_loss)`: Loss-printing function.
+- `compute_loss(self, model, inputs, return_outputs=False)`: Modified compute_loss function from the original Hugging Face code to accommodate derivative loss.
+- `custom_data_collator_forget(samples)` and `custom_data_collator_dpo(samples)`: Custom data collators due to multiple types of input (forget, retain, derivative).
+
+### data_module.py
+
+- `class TextForgetDatasetQA(Dataset)` and `class TextForgetDrvDatasetQA(Dataset)`:
+  Convert the dataset into a suitable format for Llama 2.
+
+- `convert_raw_data_to_model_format(tokenizer, max_length, question, answer, model_configs)`:
+  Convert dataset text to the model (Llama 2) format using their tokenizer and special token marks.
+
+- `custom_data_collator`:
+  Custom collator to combine the three subsets (forget, derivative, retain) during unlearning.
+
+### utils.py
+
+- `get_model_identifiers_from_yaml`: Helper function for getting the model-specific token tag for converting text into tokens.
+- `find_all_linear_names`: Helper function to get all linear layers for LoRA.
+- `print_trainable_parameters`: Printing function for LoRA.
+- `get_model_utility(eval_result_dict)` and `get_forget_quality(unlearn_result, retain_result)`: Helper functions for evaluating unlearning performance.
+- `setup_model(cfg)`: Helper function for model preprocessing for both fine-tuning and unlearning.
+
+### Config Files
+
+All parameters can be configured in the config files:
+
+#### [finetune_lora.yaml](https://github.com/dmlab-llm/Unlearn_Gaudi/blob/main/config/finetune_lora.yaml)
+
+- `model_id`: HF model used for fine-tuning (default: `Llama-2-7b-chat-hf`)
+- `model_family`: Llama 2 7B
+- `LoRA`: LoRA parameter settings
+- `data_path`: Path to the dataset for fine-tuning
+- `batch_size`: Fine-tuning batch size
+- `gradient_accumulation_steps`: Gradient accumulation steps
+- `num_epochs`: Number of epochs
+- `save_dir`: Save directory
+- `lr`: Learning rate
+- `weight_decay`: Weight decay
+- `seed`: Seed for reproducibility
+
+#### [forget.yaml](https://github.com/dmlab-llm/Unlearn_Gaudi/blob/main/config/forget.yaml)
+
+- `forget_data_path`: Path to forget dataset
+- `derivative_data_path`: Path to derivative dataset
+- `retain_data_path`: Path to retain dataset
+- `forget_loss`: Forget loss used
+- `retain_loss`: Retain loss used
+- `derivative_loss`: Derivative loss used
+- `use_drv`: Whether unlearning includes derivative loss
+- `use_rt`: Whether unlearning includes retain loss
+
+
 ## Reference
 
 [1] Pratyush Maini, Zhili Feng, Avi Schwarzschild, Zachary C. Lipton, and J. Zico Kolter. TOFU: A task of fictitious unlearning for LLMs. In Proceedings of the Conference on Language Modeling (COLM), 2024.
