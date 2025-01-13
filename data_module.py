@@ -6,6 +6,11 @@ import datasets
 from utils import get_model_identifiers_from_yaml, add_dataset_index
 
 def convert_raw_data_to_model_format(tokenizer, max_length,  question, answer, model_configs):
+    '''
+    This function converts the raw data to the format required by the model depending on the model.
+    For instance, Llama-2-7b-chat-hf requires the question to be wrapped with the question start of [INST] and end tokens [/INST].
+    This function will first wrap the question with the start and end tokens and then tokenize the question and answer.
+    '''
     question_start_token, question_end_token, answer_token = model_configs['question_start_tag'], model_configs['question_end_tag'], model_configs['answer_tag']
     new_question = question_start_token + question + question_end_token
     new_answer = answer_token + answer
@@ -32,6 +37,18 @@ def convert_raw_data_to_model_format(tokenizer, max_length,  question, answer, m
     return torch.tensor(pad_input_ids),torch.tensor(label),torch.tensor(pad_attention_mask)
     
 class TextForgetDatasetQA(Dataset):
+    '''
+    This class is used to preprocess and load the dataset for the forgetting task
+    The class inherits from the torch Dataset class.
+    The class can takes either a local csv file or a dataset from the Huggingface datasets library.
+
+    For each QnA Pair, this class will:
+    1. Load the dataset accordinf to the subset (forget, retain, idk)
+    2. Give the index according to the subset
+    3. Convert the raw data to the format required by the model using the convert_raw_data_to_model_format function
+    4. Pad the input_ids, labels and attention_mask to the max_length
+    5. Return the list of padded input_ids, labels, attention_mask and the index of the dataset as a tensor
+    '''
     def __init__(self, data_path, tokenizer, model_family,  max_length=512, split = "forget10", is_local_csv=False, loss_type="idk" ,include_retain=True):
         super(TextForgetDatasetQA, self).__init__()
         self.tokenizer = tokenizer
@@ -75,6 +92,10 @@ class TextForgetDatasetQA(Dataset):
         return rets
 
 class TextForgetDrvDatasetQA(Dataset):
+    '''
+    This class have the same functionality as TextForgetDatasetQA but it also includes the derivative data. 
+    Therefore, the behavior is the same as TextForgetDatasetQA except that it includes the derivative data.
+    '''
     def __init__(self, fgt_data_path=None, drv_data_path=None, retain_data_path=None, tokenizer=None, model_family=None,  max_length=512, fgt_local_csv=False, drv_local_csv=False):
         super(TextForgetDrvDatasetQA, self).__init__()
         self.tokenizer = tokenizer
@@ -89,6 +110,7 @@ class TextForgetDrvDatasetQA(Dataset):
 
     def __getitem__(self, idx):
         rets = []
+        # get the data from the forget, derivative and retain datasets
         for data_type in ["forget", "derivative", "retain"]:
             if data_type == "derivative":
                 data = self.derivative_data
@@ -96,6 +118,8 @@ class TextForgetDrvDatasetQA(Dataset):
                 data = self.forget_data
             elif data_type == "retain":
                 data = self.retain_data
+
+            # get the index according to the dataset
             idx = idx if data_type != "retain" else (idx + torch.randint(0, len(self.retain_data), (1,)).item()) % len(self.retain_data)
             question = data[idx]['question']
             answer = data[idx]['answer']
@@ -104,6 +128,11 @@ class TextForgetDrvDatasetQA(Dataset):
         return rets
 
 class TextForgetDatasetDPOQA(Dataset):
+    '''
+    This class also have the same functionality as TextForgetDatasetQA.
+    The diffence is the inclusion of idontknowfile that contains idk-variant answers such as "I don't know", "I have no idea", etc.
+    This class is specifically used for the DPO task.
+    '''
     def __init__(self, fgt_data_path=None, drv_data_path=None, retain_data_path=None, tokenizer = None, model_family = None, max_length=512,  fgt_local_csv=False, drv_local_csv=False):
         super(TextForgetDatasetDPOQA, self).__init__()
         self.tokenizer = tokenizer
@@ -146,6 +175,17 @@ class TextForgetDatasetDPOQA(Dataset):
         return rets
 
 class TextDatasetQA(Dataset):
+    '''
+    This class is used to preprocess and load the dataset for the QA task for the finetuning process. 
+    The class inherits from the torch Dataset class.
+    The class can takes either a local csv file or a dataset from the Huggingface datasets library.
+
+    For each QnA Pair, this class will:
+    1. Load the dataset
+    2. Convert the raw data to the format required by the model using the convert_raw_data_to_model_format function
+    3. Pad the input_ids, labels and attention_mask to the max_length
+    4. Return the padded input_ids, labels, attention_mask and the index of the dataset as a tensor
+    '''
     def __init__(self, data_path, tokenizer, model_family, max_length=512, split = None, is_local_csv=False, question_key='question', answer_key='answer'):
         super(TextDatasetQA, self).__init__()
         self.tokenizer = tokenizer
