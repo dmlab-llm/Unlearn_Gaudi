@@ -18,6 +18,11 @@ from optimum.habana import GaudiTrainingArguments
 
 @hydra.main(version_base=None, config_path="config", config_name="forget")
 def main(cfg):
+    '''
+    the main function for doing forgetting with or without MOUCHI. 
+    The code is relatively similar to the finetune.py code, but with using the CustomTrainerForgetting instead of the CustomTrainer class.
+    Therefore, check the CustomTrainerForgetting class for more details on the implementation.
+    '''
 
     # setup the model
     model_cfg, model_id = setup_model(cfg)
@@ -44,6 +49,7 @@ def main(cfg):
     print(f"steps_per_epoch: {steps_per_epoch}")
     print(f"max_steps: {max_steps}")
 
+    # set the training arguments, including the Gaudi specific arguments
     training_args = GaudiTrainingArguments(
             use_habana=True,
             use_lazy_mode=False,
@@ -124,7 +130,7 @@ def main(cfg):
         model = get_peft_model(model, config)
         print_trainable_parameters(model)
 
-    
+    # Use CustomTrainerForgetting for the forgetting task
     trainer = CustomTrainerForgetting(
         model=model,
         tokenizer=tokenizer,

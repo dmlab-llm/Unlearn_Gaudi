@@ -97,6 +97,10 @@ def eval_perturbation_ratio(eval_dataloader, perturb_dataloader, model):
     return eval_logs
 
 def get_dataloader(cfg, eval_task, tokenizer, folder, split, question_key, answer_key, base_answer_key, perturbed_answer_key):
+    '''
+    This function is for getting and pre processing the data for the evaluation.
+    depending on the task, it recieves the label and later on the model will be evaluated based on the label.
+    '''
 
     torch_format_dataset = TextDatasetQA( 
         folder, 

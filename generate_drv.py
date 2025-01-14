@@ -28,6 +28,10 @@ def clean_generated_answer(generated_answer):
     return f"{question};{answer}"
 
 def generate_answer(question, answer, delta_max, delta_min, generator, shard):
+    '''
+    This is the function to generate the derivative knowledge.
+    The function takes the question, answer, delta_max, delta_min, generator, and shard as input.
+    '''
     prompt =  f"""
     <<SYS>>
     You are generating a question and answer for a dataset named 'Derivative Knowledge Dataset.' This questions and answers is derived from an existing dataset originally designed for unlearning copyrighted content related to book authors. The original dataset includes question and answer pairs about the authors and their book content. To effectively create the new dataset while adhering to fair use, include snippets from the original dataset as references.
