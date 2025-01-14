@@ -18,6 +18,9 @@ from transformers.integrations.deepspeed import deepspeed_init, deepspeed_load_c
 from optimum.habana import GaudiConfig, GaudiTrainer, GaudiTrainingArguments
 
 class CustomTrainer(GaudiTrainer):
+    '''
+    Simple custom trainer example from the fine-tuning repo
+    '''
     def compute_loss(self, model, inputs, return_outputs=False):
         input_ids, labels, attention_mask = inputs
         # forward pass
@@ -35,6 +38,17 @@ class CustomTrainer(GaudiTrainer):
         return (loss, logits, labels)
     
 class CustomTrainerForgetting(GaudiTrainer):
+    '''
+    This is the custom trainer for the MOUCHI experiment. The Trainer is derived from the GaudiTrainer (Huggingface 
+    Trainer) class. The modifiction includes the following:
+    1. compute_loss: We modify the compute_loss to include baslines from other experiments. Furthermore, the compute_loss also include all the losses required for the MOUCHI experiment. (forget_loss, derivative_loss, retain_loss)
+    2. prediction_step: We modify the prediction_step to include the logits and labels for the MOUCHI experiment.
+    3. evaluate: We modify the evaluate function to include the evaluation for the MOUCHI experiment. The evaluation includes the evaluation for the forget_rate, model utility and forget quality.
+
+    On top of the above modifications, we also create some helper functions as follows:
+    1. e_prepare_deepspeed: this function is used to prepare the oracle model for some experiments that are KL, DPO and NPO. The oracle model is used to calculate the divergence between the current model and the oracle model.
+    2. log_and_print_losses: this function is used to log and print the losses for the MOUCHI experiment.
+    '''
     def __init__(self, *args, **kwargs):
         self.loss_type = kwargs.pop('forget_loss')
         self.oracle_model = kwargs.pop('oracle_model')
@@ -49,6 +63,11 @@ class CustomTrainerForgetting(GaudiTrainer):
             self.oracle_model = self.e_prepare_deepspeed(self.oracle_model)
 
     def e_prepare_deepspeed(self, model):
+        '''
+        This code is to prepare the oracle model to be available while using the deepspeed plugin.
+        The code is adapted from the accelerate library as well as the TOFU code.
+        The input is the oracle model and the output is the oracle model with the deepspeed plugin.
+        '''
         # Adapted from accelerate: https://github.com/huggingface/accelerate/blob/739b135f8367becb67ffaada12fe76e3aa60fefd/src/accelerate/accelerator.py#L1473
         deepspeed_plugin = self.accelerator.state.deepspeed_plugin
         config_kwargs = copy.deepcopy(deepspeed_plugin.deepspeed_config)
@@ -85,6 +104,9 @@ class CustomTrainerForgetting(GaudiTrainer):
         return model
     
     def log_and_print_losses(self, forget_loss, derivative_loss, retain_loss, total_loss):
+        '''
+        This function is used to log and print the losses according to the current experiment.
+        '''
         self.state.forget_loss = forget_loss.item()
         self.state.derivative_loss = derivative_loss.item() if isinstance(derivative_loss, torch.Tensor) else derivative_loss
         self.state.retain_loss = retain_loss.item() if isinstance(retain_loss, torch.Tensor) else retain_loss
@@ -100,6 +122,11 @@ class CustomTrainerForgetting(GaudiTrainer):
                 print(loss_msg)
 
     def compute_loss(self, model, inputs, return_outputs=False):
+        '''
+        This is the modified compute_loss function for the MOUCHI experiment.
+        according to the loss_type, the function will preprocess and calculate the losses accordingly.
+        The inputs are the model, the state from previous steps, as well as arguments from __init__.
+        '''
         if self.loss_type == "GA":
             forget_inputs, derivative_inputs, retain_inputs = inputs
 
@@ -158,6 +185,7 @@ class CustomTrainerForgetting(GaudiTrainer):
             loss = forget_loss + 4 * (derivative_loss if self.use_drv else 0) +  1 * (retain_loss if self.use_rt else 0)
             self.log_and_print_losses(forget_loss, derivative_loss, retain_loss, loss)
         
+        # DPO loss
         elif self.loss_type == "DPO":
             idk_inputs, forget_inputs, derivative_inputs, retain_inputs = inputs
             
@@ -234,6 +262,7 @@ class CustomTrainerForgetting(GaudiTrainer):
             loss = forget_loss + 4 * (derivative_loss if self.use_drv else 0) +  1 * (retain_loss if self.use_rt else 0)
             self.log_and_print_losses(forget_loss, derivative_loss, retain_loss, loss)            
 
+        # NPO loss
         elif self.loss_type == "NPO":
             forget_inputs, derivative_inputs, retain_inputs = inputs
 
