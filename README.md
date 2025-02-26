@@ -1,8 +1,8 @@
-# Mitigating Over-forgetting in Unlearning Copyrighted Information (MOUCHI) in Gaudi
+# Mitigating Over-forgetting in Unlearning Copyrighted Information (MOUCHI) in Gaudi-v2
 
 ## Introduction
 
-In this repository, we implement the MOUCHI framework in Gaudi. The framework consists of two main submodules:
+In this repository, we implement the MOUCHI framework in Gaudi-v2. The framework consists of two main submodules:
 
 1. **Derivative Knowledge Generation**
 2. **Derivative Knowledge Incorporation During the Unlearning Process**
@@ -11,7 +11,7 @@ This code is part of our research paper and is built upon the original code prov
 
 ## Getting Started
 
-Inside the Gaudi docker environment, install the necessary dependencies by running:
+Inside the Gaudi-v2 docker environment, install the necessary dependencies by running:
 
 ```bash
 pip install -r requirements.txt
@@ -26,7 +26,7 @@ PT_HPU_LAZY_MODE=0 python finetune.py --config-name=finetune_lora.yaml
 ```
 
 **Explanation:**
-- `PT_HPU_LAZY_MODE=0`: Enables eager mode as lazy mode is currently not supported on Gaudi.
+- `PT_HPU_LAZY_MODE=0`: Enables eager mode as lazy mode is currently not supported on Gaudi-v2.
 - `--config-name`: Specifies the configuration file. Detailed configurations can be found in `config/finetune_lora.yaml`.
 
 For fine-tuning using LoRA, use the configuration file located at `./config/finetune_lora.yaml`.
@@ -85,15 +85,15 @@ trainer = CustomTrainerForgetting(
 
 ### dataloader.py
 
-**`class CustomTrainer(GaudiTrainer)`**
+**`class CustomTrainer(Gaudi-v2Trainer)`**
 
 The custom trainer used for fine-tuning the model with the dataset throughout the experiment.
 
-**`class CustomTrainerForgetting(GaudiTrainer)`**
+**`class CustomTrainerForgetting(Gaudi-v2Trainer)`**
 
 Consists of several functions:
 
-- `__init__(self, *args, **kwargs)`: Parameters passed from the `GaudiTrainingArgs`.
+- `__init__(self, *args, **kwargs)`: Parameters passed from the `Gaudi-v2TrainingArgs`.
 - `e_prepare_deepspeed(self, model)`: Modified code from the original transformer’s DeepSpeed code to prepare DeepSpeed.
 - `log_and_print_losses(self, forget_loss, derivative_loss, retain_loss, total_loss)`: Loss-printing function.
 - `compute_loss(self, model, inputs, return_outputs=False)`: Modified compute_loss function from the original Hugging Face code to accommodate derivative loss.
@@ -122,7 +122,7 @@ Consists of several functions:
 
 All parameters can be configured in the config files:
 
-#### [finetune_lora.yaml](https://github.com/dmlab-llm/Unlearn_Gaudi/blob/main/config/finetune_lora.yaml)
+#### [finetune_lora.yaml](https://github.com/dmlab-llm/Unlearn_Gaudi-v2/blob/main/config/finetune_lora.yaml)
 
 - `model_id`: HF model used for fine-tuning (default: `Llama-2-7b-chat-hf`)
 - `model_family`: Llama 2 7B
@@ -136,7 +136,7 @@ All parameters can be configured in the config files:
 - `weight_decay`: Weight decay
 - `seed`: Seed for reproducibility
 
-#### [forget.yaml](https://github.com/dmlab-llm/Unlearn_Gaudi/blob/main/config/forget.yaml)
+#### [forget.yaml](https://github.com/dmlab-llm/Unlearn_Gaudi-v2/blob/main/config/forget.yaml)
 
 - `forget_data_path`: Path to forget dataset
 - `derivative_data_path`: Path to derivative dataset
