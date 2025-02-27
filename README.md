@@ -36,8 +36,14 @@ For fine-tuning using LoRA, use the configuration file located at `./config/fine
 To perform the unlearning process on the fine-tuned model, use the following script:
 
 ```bash
-PT_HPU_LAZY_MODE=0 python forget_drv.py --config-name=forget.yaml
+PT_HPU_LAZY_MODE=0 python gaudi_spawn.py --world_size 8 --use_deepspeed finetune.py --config-name=finetune_lora.yaml
 ```
+
+**Explanation:**
+- `PT_HPU_LAZY_MODE=0`: Enables eager mode as lazy mode is currently not supported on Gaudi-v2.
+- `--world_size 8`: Amount of HPU used
+- `--use_deepspeed`: Whether using deepspeed or not
+- `--config-name`: Specifies the configuration file. Detailed configurations can be found in `config/finetune_lora.yaml`.
 
 The parameters, including the unlearning hyperparameters and loss functions, can be configured in `config/forget.yaml`.
 
